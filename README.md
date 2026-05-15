@@ -14,13 +14,13 @@
 | Repo | What | Status |
 |------|------|--------|
 | **[helix-substrate](https://github.com/echo313unfolding/helix-substrate)** | Calibration-free HXQ weight compression | v0.3.3 on [PyPI](https://pypi.org/project/helix-substrate/), 15 models on [HF](https://huggingface.co/EchoLabs33) |
-| **[sentinel-hybrid-stack](https://github.com/echo313unfolding/sentinel-hybrid-stack)** | External recurrent memory + post-LLM safety gate | v0.1.0, 60/60 tests, no LLM required |
+| **[echo-sentry](https://github.com/echo313unfolding/echo-sentry)** | External recurrent memory + post-LLM safety gate | v0.1.0, 60/60 tests, no LLM required |
 | **[helix-online-kv](https://github.com/echo313unfolding/helix-online-kv)** | KV cache compression using same VQ codec | 1.9x more context, 87.5% attention sparsity |
 | **[echo_runtime](https://github.com/echo313unfolding/echo_runtime)** | Unified compressed inference runtime | All layers in one forward pass |
 
 **helix-substrate** compresses any `nn.Linear` across Transformers, SSMs, hybrids, MoEs, and vision models. Calibration-free. ~2x from BF16, ~4x per-tensor from FP32.
 
-**sentinel-hybrid-stack** demonstrates how deterministic safety layers can augment LLM-based triage: a recurrent SSM tracks entity state, and a conservative gate catches dangerous contradictions the model misses.
+**echo-sentry** demonstrates how deterministic safety layers can augment LLM-based triage: a recurrent SSM tracks entity state, and a conservative gate catches dangerous contradictions the model misses.
 
 Same design principles: model-pluggable, receipts-first, audit-friendly.
 
@@ -47,7 +47,7 @@ Tracks lobbying, ownership, and judicial networks from government data (SEC EDGA
 
 ## License
 
-Echo Labs LLC. sentinel-hybrid-stack is MIT.
+Echo Labs LLC. echo-sentry is MIT.
 
 <div align="center">
 
