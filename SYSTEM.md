@@ -53,13 +53,20 @@ runtime call) · `strict integration` (real end-to-end) · `mock / fixture` · `
 
 ### Artifact formation
 **Purpose:** turn model weights / signals into portable, independently reproducible
-artifacts. **Repos:** `helix-substrate`, `helix-codec`, `hxq-native`, `hxq-whitepaper`,
-`llama.cpp` fork. **In:** dense tensors / HF models. **Out:** HXQ artifact + fidelity
-receipt. **Evidence:** Zamba2-1.2B 136/136 modules at max_error 0.0 (`hxq-native`);
-non-LLM embeddings cos 0.999676, C-vs-Python bit-identical (`helix-codec`); GGUF `Q8_0`
-parity. **Integration:** proven component + proven cross-implementation. **Gap:**
-canonical cross-implementation byte vector pending; `helix-substrate` package import
-mid-refactor.
+artifacts. **Two related but DISTINCT HXQ codec families (different algorithms — do not
+conflate):**
+- **HXQ-VQ / CDNAv3** (k-means VQ + sidecar): `helix-substrate` (Python reference, format-defining) ↔ `hxq-native` (C/CUDA companion).
+- **HXQ-Affine** (per-group min/max affine blocks, no codebook): `helix-codec` (C99) ↔ `llama.cpp` HXQ affine GGML types.
+- Spec: `hxq-whitepaper`.
+
+**In:** dense tensors / HF models. **Out:** HXQ artifact + fidelity receipt. **Evidence:**
+Zamba2-1.2B 136/136 modules at max_error 0.0 (`hxq-native`, VQ family); non-LLM embeddings
+cos 0.999676, C-vs-Python bit-identical (`helix-codec`, affine family); GGUF `Q8_0` parity.
+**Integration:** **multiple proven implementations across the two families, sharing a
+common artifact/receipt *direction* — but canonical interoperability (one byte format +
+golden vectors) remains PENDING.** Not yet one proven cross-implementation format.
+**Gap:** cross-implementation byte vector + family-bridge not done; `helix-substrate`
+package import mid-refactor.
 
 ### Runtime-state compression
 **Purpose:** compress KV-cache / activations at inference time. **Repo:**
@@ -79,9 +86,10 @@ not featured.)*
 **Purpose:** lower NL / model output into typed, validated intermediate representation
 before execution; compile intent through capability gates. **Repos:** `poetica`,
 `KRISPER`, and the `cell-runtime` plan-IR (typed IR, constrained-decoding grammar, six
-lowering targets, execution oracle). **Out:** typed plan-IR + signed receipt.
-**Integration:** real compiler/validation work; **KRISPER not yet called by the
-orchestrator.**
+lowering targets, execution oracle). **Out:** typed plan-IR + deterministic hashed receipt
+(hashed audit record — **not** cryptographically signed unless the home box confirms a
+signing key). **Integration:** real compiler/validation work; **KRISPER not yet called by
+the orchestrator.**
 
 ### Local agent runtime
 **Purpose:** route work across local models, execute bounded actions, keep session

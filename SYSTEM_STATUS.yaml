@@ -2,7 +2,15 @@ _meta:
   purpose: >
     Single source of truth for the Echo Labs substrate. Every count in the profile or any
     README must be generated from or checked against this file. See docs/STATUS_SCHEMA.md.
-  authored_from: public github checkout only (work-box), no home-box memory used
+  sources:
+    - {id: public_checkout, type: observed}       # observed on the work-box: SHAs, default branches, the 3 READMEs
+    - {id: advisor_home_context, type: reported}  # reported by advisor with home-box memory; NOT observed here
+    - {id: home_box_verified, type: pending}      # pending local verification on the home box
+  authored_from: >
+    Component SHAs, default branches, and the three corrected READMEs are `public_checkout`
+    (observed on the work-box). Items naming local-only trees, unpushed state, or advisor
+    test counts are `advisor_home_context` (reported), NOT observed on GitHub — see
+    verify_pending_on_home_box.
   observed_at: "2026-07-12T00:00:00Z"
   framing: >
     A local-first agent compute substrate that turns heterogeneous data and models into
@@ -11,27 +19,37 @@ _meta:
     verifiable evidence. NOT (yet) an OS, a data market, a rights protocol, or a universal
     ontology.
   recurring_primitive: profile -> route -> bounded execute -> receipt -> graph
+  verification_summary:
+    verified_on_work_box:
+      - echo313unfolding/echo-sentry   # pytest -q = 60 passed @ 7a6c3790
+    reported_or_not_run:
+      - all_other_components
   IMPORTANT: >
-    Every `verification.status` here is `reported` or `not_run` — NO count was executed on
-    the work-box. Home-box review must run each command against `observed.commit_sha` to
-    promote any count to `verified`.
+    Only echo-sentry was EXECUTED on the work-box (60 passed). Every OTHER
+    `verification.status` is `reported` or `not_run`; home-box review must run each command
+    against `observed.commit_sha` to promote any count to `verified`.
 
 verify_pending_on_home_box:
-  - exact local-vs-remote SHA, ahead/behind, and dirty state per repo
-  - whether the full echo-sentry daemon/watcher tree exists locally (absent from public checkout)
-  - whether sentinel.runtime.hybrid_stack resolves in the active cell-runtime
-  - hxq-solana test-count conflict (system-graph 83 vs README 92)
-  - MorphSAT README count 123 vs reported 321 (+ 95.1% Mode M) — run to verify
-  - cell-runtime profile count 153 vs reported 337+ (plan-IR) — run to verify
-  - per-repo public/private visibility confirmation
-  - local-only trees not on GitHub: flowtorch, echo_bridge, echo_os, krisper-unified
+  reported_by_advisor_home_context:   # source: advisor_home_context — reported, NOT observed on GitHub
+    - "local-only trees not on GitHub: flowtorch, echo_bridge, echo_os, krisper-unified"
+    - "MorphSAT 321 tests + 95.1% Mode M"
+    - "cell-runtime 337+ tests (plan-IR)"
+    - "hxq-solana 83 tests (system-graph)"
+  to_observe_on_home_box:             # source: home_box_verified — pending; must be run/inspected locally
+    - "exact local-vs-remote SHA, ahead/behind, and dirty state per repo"
+    - "whether the full echo-sentry daemon/watcher tree exists locally (absent from public checkout)"
+    - "whether sentinel.runtime.hybrid_stack resolves in the active cell-runtime"
+    - "hxq-solana README 92 vs system-graph 83 — run to verify"
+    - "MorphSAT README 123 vs advisor 321 — run to verify"
+    - "cell-runtime profile 153 vs advisor 337+ — run to verify"
+    - "per-repo public/private visibility confirmation"
 
 components:
 
   - repo: echo313unfolding/helix-substrate
     role: artifact_formation
     visibility: public
-    default_branch: main
+    default_branch: master
     observed: {commit_sha: "21165f8abf9448e0ce1cbb64d3523c0db93f0807", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
     verification: {status: reported, command: "pytest -q", result: "routing agreement 99.6% / 1,544 comparisons (v0.4.5); suite present, not run", verified_at: null, environment: null}
     maturity: {component: proven, integration: production}
@@ -74,7 +92,7 @@ components:
   - repo: echo313unfolding/hxq-whitepaper
     role: artifact_formation
     visibility: public
-    default_branch: main
+    default_branch: master
     observed: {commit_sha: "1f6ea43347729039e12f709689352932530c185c", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
     verification: {status: not_run, command: null, result: null, verified_at: null, environment: null}
     maturity: {component: proven, integration: missing}
@@ -83,7 +101,7 @@ components:
   - repo: echo313unfolding/echo-origin-gold
     role: artifact_profiling_routing
     visibility: private
-    default_branch: main
+    default_branch: master
     observed: {commit_sha: "7be445659c5fd1388050bedaf288ab9e279491ac", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
     verification: {status: reported, command: "pytest -q", result: "60.9% role acc (5.5x random, leave-one-layer-out) on ONE 167M model; 63.7% on pretrained; 116 adapter tests on SYNTHETIC data (reported)", verified_at: null, environment: null}
     maturity: {component: prototype, integration: thin_adapter}
@@ -147,7 +165,7 @@ components:
   - repo: echo313unfolding/FGIP
     role: evidence_ontology
     visibility: public
-    default_branch: main
+    default_branch: master
     observed: {commit_sha: "0021d09e76de0fb9abb6b3b59a0b4f99728bbebd", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
     verification: {status: reported, command: "pytest -q", result: "generic evidence_graph pkg + 2nd security.yaml domain; gated proposal->promotion->receipt (reported)", verified_at: null, environment: null}
     maturity: {component: proven, integration: thin_adapter}
@@ -158,7 +176,7 @@ components:
   - repo: echo313unfolding/fgip-globe
     role: evidence_ontology
     visibility: public
-    default_branch: main
+    default_branch: master
     observed: {commit_sha: "c8f46c51f8937ece7bc3aa5fc40a909ef8baacf9", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
     verification: {status: not_run, command: null, result: "2 of 6 layers implemented (reported)", verified_at: null, environment: null}
     maturity: {component: prototype, integration: production}
