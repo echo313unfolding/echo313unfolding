@@ -7,6 +7,8 @@ Transition structure appears to preserve execution-relevant behavior after value
 
 This is not a claim about lossless reconstruction. It is a claim about what the compressed artifact *already encodes* — enough to route, classify, and pre-screen without materializing the original weights.
 
+> **System map (start here):** [`SYSTEM.md`](./SYSTEM.md) — the whole-system architecture — and [`SYSTEM_STATUS.yaml`](./SYSTEM_STATUS.yaml) — an authoritative per-repo status manifest (proven vs. prototype vs. gap, with verification state; see [`docs/STATUS_SCHEMA.md`](./docs/STATUS_SCHEMA.md)). Individual counts elsewhere in this README are being reconciled against that manifest.
+
 ---
 
 ## Research Threads

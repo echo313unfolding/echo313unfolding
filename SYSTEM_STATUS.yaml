@@ -1,0 +1,232 @@
+_meta:
+  purpose: >
+    Single source of truth for the Echo Labs substrate. Every count in the profile or any
+    README must be generated from or checked against this file. See docs/STATUS_SCHEMA.md.
+  authored_from: public github checkout only (work-box), no home-box memory used
+  observed_at: "2026-07-12T00:00:00Z"
+  framing: >
+    A local-first agent compute substrate that turns heterogeneous data and models into
+    bounded artifacts, profiles them before expensive computation, routes them through
+    constrained runtimes, gates execution, and records consequential transformations as
+    verifiable evidence. NOT (yet) an OS, a data market, a rights protocol, or a universal
+    ontology.
+  recurring_primitive: profile -> route -> bounded execute -> receipt -> graph
+  IMPORTANT: >
+    Every `verification.status` here is `reported` or `not_run` — NO count was executed on
+    the work-box. Home-box review must run each command against `observed.commit_sha` to
+    promote any count to `verified`.
+
+verify_pending_on_home_box:
+  - exact local-vs-remote SHA, ahead/behind, and dirty state per repo
+  - whether the full echo-sentry daemon/watcher tree exists locally (absent from public checkout)
+  - whether sentinel.runtime.hybrid_stack resolves in the active cell-runtime
+  - hxq-solana test-count conflict (system-graph 83 vs README 92)
+  - MorphSAT README count 123 vs reported 321 (+ 95.1% Mode M) — run to verify
+  - cell-runtime profile count 153 vs reported 337+ (plan-IR) — run to verify
+  - per-repo public/private visibility confirmation
+  - local-only trees not on GitHub: flowtorch, echo_bridge, echo_os, krisper-unified
+
+components:
+
+  - repo: echo313unfolding/helix-substrate
+    role: artifact_formation
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "21165f8abf9448e0ce1cbb64d3523c0db93f0807", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "routing agreement 99.6% / 1,544 comparisons (v0.4.5); suite present, not run", verified_at: null, environment: null}
+    maturity: {component: proven, integration: production}
+    interfaces: {consumes: ["hf_safetensors","gguf"], emits: ["cdnav3_artifact","execution_receipt.v1","layer_chain_receipt"]}
+    known_gaps: ["package top-level import mid-refactor (cdnav3_* vs hxq_*)"]
+    notes: ["format-defining Python reference codec + gauge-routing research"]
+
+  - repo: echo313unfolding/helix-codec
+    role: artifact_formation
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "874ab56a6a71fe95a74bbb225d7b67d4658acf22", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "python test_equivalence.py", result: "non-LLM embedding cos 0.999676; C-vs-Python bit-identical (reported)", verified_at: null, environment: null}
+    maturity: {component: proven, integration: production}
+    interfaces: {consumes: ["dense_tensor"], emits: ["hxq_affine_block","hxq_receipt.v2"]}
+    known_gaps: ["canonical cross-implementation byte vector PENDING"]
+    notes: ["C99 affine codec; authoritative receipt schema v2.0 (SCHEMA.md); != the VQ codec"]
+
+  - repo: echo313unfolding/hxq-native
+    role: artifact_formation
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "81a01c8e5a3ee8221cb3ec3915ef16aa4bb5ebee", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "make test", result: "Zamba2-1.2B 136/136 modules max_error 0.0; ~16x vs Python; GGUF==Q8_0; 41 tests (reported)", verified_at: null, environment: null}
+    maturity: {component: proven, integration: production}
+    interfaces: {consumes: ["cdnav3_artifact","hxq_safetensors"], emits: ["dense_tensor","confidence_signal"]}
+    known_gaps: ["CUDA kernels marked compile-but-needs-GPU-test"]
+    notes: ["native C/CUDA decompressor; twin of helix-substrate VQ codec"]
+
+  - repo: echo313unfolding/helix-online-kv
+    role: runtime_state_compression
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "b8889118f0d8dfaa09365f86ec0396f5b9daaaaa", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "CDC-03 cos 0.99973 on 252 entries; 0% PPL delta at k=256 (reported)", verified_at: null, environment: null}
+    maturity: {component: prototype, integration: missing}
+    interfaces: {consumes: ["kv_tensors"], emits: ["compressed_kv","experiment_receipt"]}
+    known_gaps: ["wall-clock speedups are projected op-counts; drop-in cache does not free VRAM yet"]
+
+  - repo: echo313unfolding/hxq-whitepaper
+    role: artifact_formation
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "1f6ea43347729039e12f709689352932530c185c", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: not_run, command: null, result: null, verified_at: null, environment: null}
+    maturity: {component: proven, integration: missing}
+    notes: ["spec/doc; §6 KV-cache section diverges from helix-online-kv implementation"]
+
+  - repo: echo313unfolding/echo-origin-gold
+    role: artifact_profiling_routing
+    visibility: private
+    default_branch: main
+    observed: {commit_sha: "7be445659c5fd1388050bedaf288ab9e279491ac", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "60.9% role acc (5.5x random, leave-one-layer-out) on ONE 167M model; 63.7% on pretrained; 116 adapter tests on SYNTHETIC data (reported)", verified_at: null, environment: null}
+    maturity: {component: prototype, integration: thin_adapter}
+    interfaces: {consumes: ["codebook","indices"], emits: ["route_decision","geometry_route_receipt"]}
+    known_gaps: ["ghost_bridge feature extractor unvendored (home path)", "downstream runtimes are thin adapters, not real cell-runtime calls", "no cross-architecture generalization"]
+    notes: ["private repo; DO NOT feature the 95.3% figure (in-sample/inflated)"]
+
+  - repo: echo313unfolding/poetica
+    role: plan_and_policy_ir
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "e1443be83891d576083d295c6a93827d65ffabf8", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "gate + receipt + 6 emitters implemented/tested (reported)", verified_at: null, environment: null}
+    maturity: {component: proven, integration: missing}
+    interfaces: {consumes: ["poem_source"], emits: ["poetica_ir_v1","poetica.receipt.v1"]}
+    notes: ["also vendored as cell.biopoetica; public standalone role unclear"]
+
+  - repo: echo313unfolding/KRISPER
+    role: plan_and_policy_ir
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "4a05b6d63449d34792e228852ceb15fe698ddceb", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "python test_krisper.py", result: "compress/hash round-trip runs (reported)", verified_at: null, environment: null}
+    maturity: {component: prototype, integration: missing}
+    known_gaps: ["not called by the main orchestrator", "attest/capsule/mint verbs declared but unimplemented"]
+    notes: ["also relocated to cell-runtime/src/cell/krisper"]
+
+  - repo: echo313unfolding/cell-runtime
+    role: local_agent_runtime
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "435085bbedff657728b9631e2c39be809b8c98c7", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "profile README says 153; later plan-IR commit reports 337 existing + 42 added (reported, CONFLICT — run to verify)", verified_at: null, environment: null}
+    maturity: {component: proven, integration: production}
+    interfaces: {consumes: ["openai_chat","plan_ir"], emits: ["task_record","swap_log","typed_plan_ir"]}
+    known_gaps: ["bypasses the PUBLISHED echo-sentry library (imports internal layout)", "default config collapses 3 lanes -> 2 models", "dirty/home WIP (Poetica/plan-IR) beyond remote"]
+    notes: ["router + OpenAI gateway + model-agnostic state/gate separation; typed plan-IR, constrained-decoding grammar, 6 lowering targets, execution oracle"]
+
+  - repo: echo313unfolding/MorphSAT
+    role: safety_control
+    visibility: public
+    default_branch: master
+    observed: {commit_sha: "14689b7a36f263c81a1a9f41522d55546fd76992", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "README=123 tests / v8.3; later pushed state reported 321 tests + 95.1% Mode M, zero false-safe (CONFLICT — run to verify)", verified_at: null, environment: null}
+    maturity: {component: proven, integration: missing}
+    interfaces: {consumes: ["evidence_event"], emits: ["gate_decision","shadow_receipt","receipt_chain"]}
+    known_gaps: ["not instantiated in the cell-runtime production path"]
+    notes: ["decision/admissibility gate — NOT a SAT solver; README is stale vs pushed state"]
+
+  - repo: echo313unfolding/echo-sentry
+    role: safety_control
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "7a6c3790b2997ed65e74819062eb9eedd5bec000", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "public checkout = sentinel_hybrid_stack skeleton, 3 test files (survey reported ~60 test fns) — not run", verified_at: null, environment: null}
+    maturity: {component: proven, integration: missing}
+    interfaces: {consumes: ["alert_text","llm_verdict"], emits: ["gate_result","ai_decision_receipt"]}
+    known_gaps: ["README (v0.2) describes a 3-tier daemon/watchers/YARA/systemd ABSENT from the checkout — see docs/correct-public-scope PR", "runtime bypasses this published library"]
+    notes: ["published = deterministic SSM + post-LLM gate core; fuller internal system not in this repo (PUBLIC_RELEASE_AUDIT.md)"]
+
+  - repo: echo313unfolding/FGIP
+    role: evidence_ontology
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "0021d09e76de0fb9abb6b3b59a0b4f99728bbebd", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "generic evidence_graph pkg + 2nd security.yaml domain; gated proposal->promotion->receipt (reported)", verified_at: null, environment: null}
+    maturity: {component: proven, integration: thin_adapter}
+    interfaces: {consumes: ["proposed_claim","proposed_edge","source"], emits: ["claim","edge","receipt"]}
+    known_gaps: ["README reads as a finance app; generic core buried", "MCP hardcodes finance, does not load DomainRegistry", "agent-substrate lookup minimal"]
+    notes: ["generic evidence graph under a finance skin; holds the best whole-system graph + gap registry"]
+
+  - repo: echo313unfolding/fgip-globe
+    role: evidence_ontology
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "c8f46c51f8937ece7bc3aa5fc40a909ef8baacf9", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: not_run, command: null, result: "2 of 6 layers implemented (reported)", verified_at: null, environment: null}
+    maturity: {component: prototype, integration: production}
+    notes: ["read-only geospatial view onto the FGIP graph"]
+
+  - repo: echo313unfolding/hxq-solana
+    role: provenance_settlement
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "8baf3b0d45e65fc8f1c7059f63b7aa780854cfe3", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "anchor test", result: "CONFLICT: system-graph=83 tests vs README=92; live devnet tx; Active ALLOWED / quarantined BLOCKED (reported)", verified_at: null, environment: null}
+    maturity: {component: proven, integration: strict_demo}
+    interfaces: {consumes: ["artifact_hash","fidelity_receipt"], emits: ["receipt_gated_asset","transfer_hook_enforced"]}
+    known_gaps: ["on-chain stores an owner-submitted cosine CLAIM (Truth Level 1); program does not verify fidelity itself"]
+    notes: ["one working settlement/provenance adapter — NOT the general rights economy"]
+
+  - repo: echo313unfolding/almanac-core
+    role: personal_data_receipts
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "38079564f14ac472c4471a2504641f6b0e57c10a", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "pytest -q", result: "~190 tests reported; AES-256-GCM vault, tamper-evident receipt chain, key rotation", verified_at: null, environment: null}
+    maturity: {component: proven, integration: missing}
+    interfaces: {consumes: ["broker_scan","user_identity(local)"], emits: ["almanac.*.v1 receipts","checkpoint.v1"]}
+    known_gaps: ["broader licensing/market not built; external broker actions are fixtures", "not imported by field-signal-demo"]
+
+  - repo: echo313unfolding/almanac-field-signal-demo
+    role: cross_stack_application
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "5ce10fed865471871a0c53acac4d889d86c8ad65", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "make test", result: "12 integration tests (reported)", verified_at: null, environment: null}
+    maturity: {component: prototype, integration: mocked}
+    known_gaps: ["README implies 6 live integrations; code confirms Poetica->fallback, HXQ->fallback_kmeans, MorphSAT->inline, FGIP->fixture, Solana->mock_localnet, auction->mock; see docs/declare-integration-boundaries PR"]
+    notes: ["proves interface shape + receipt-chain composition, NOT strict cross-repo execution"]
+
+  - repo: echo313unfolding/mcelroy-inventory
+    role: real_industrial_application
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "0f5eb4930ee3a1d22d3ef5232f5120683df24bf7", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: "playwright test", result: "25 E2E tests (reported); working MCP server + PWA + InvenTree backend", verified_at: null, environment: null}
+    maturity: {component: proven, integration: missing}
+    notes: ["real business domain app; proof the MCP/tool pattern works; not integrated with the substrate"]
+
+  - repo: echo313unfolding/llama.cpp
+    role: external_runtime_integration
+    visibility: public
+    default_branch: master
+    observed: {commit_sha: null, observed_at: "2026-07-12T00:00:00Z", source: "fork of ggml-org/llama.cpp; see branch zamba2-support"}
+    verification: {status: reported, command: "cmake --build + convert", result: "GGML_TYPE_HXQ_AFFINE type; Zamba2 support PR ggml-org/llama.cpp#21412, Tier-A validated (reported)", verified_at: null, environment: null}
+    maturity: {component: proven, integration: production}
+    notes: ["external runtime integration proof"]
+
+  - repo: echo313unfolding/helix-cdc
+    role: historical_lineage
+    visibility: public
+    default_branch: main
+    observed: {commit_sha: "917e9e8baf8abc25f035f8fb8e8a7926060786e1", observed_at: "2026-07-12T00:00:00Z", source: github_checkout}
+    verification: {status: reported, command: null, result: "self-documented falsified core (COMPRESSION_REALITY.md)", verified_at: null, environment: null}
+    maturity: {component: historical, integration: missing}
+    known_gaps: ["headline byte-exact-regen claim disproven by its own docs; NOT a current production dependency"]
+    notes: ["DNA/seed-regeneration research lineage; salvage receipt/verify discipline only; broad novelty language predates HXQ/MorphSAT rigor"]
+
+genuine_build_gaps:
+  - "MorphSAT not instantiated in production runtime paths"
+  - "KRISPER not called by the main orchestrator"
+  - "runtime bypasses the published echo-sentry library"
+  - "FGIP lookup from the agent substrate is minimal"
+  - "GeometryRouter adapters stop before production runtime execution"
+  - "NO real end-to-end Layer 1-6 execution path (proven components + adapters, not one strict composition)"
