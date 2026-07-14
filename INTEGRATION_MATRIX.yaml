@@ -1,0 +1,22 @@
+_meta:
+  purpose: >
+    ACTUAL production wiring (not merely interface compatibility) per substrate edge.
+    Classified by the home-box audit against running code, not architecture claims.
+  manifest_status: pending_home_box_inventory
+  RULE: >
+    The edges below are the CHECKLIST to classify. All start UNKNOWN. The home-box audit
+    assigns each a real classification against executable code. Do not assume from docs.
+  classification_enum: [PRODUCTION_WIRED, STRICT_DEMO, THIN_ADAPTER, MOCK, FIXTURE, MISSING, STALE, UNKNOWN]
+
+edges:   # status filled by the home-box audit; UNKNOWN = not yet classified
+  - {edge: "HXQ encoder -> native/runtime consumer",                 status: UNKNOWN}
+  - {edge: "Ghost/GeometryRouter/Hydra -> runtime decision",         status: UNKNOWN}
+  - {edge: "plan-IR -> validator -> execution oracle",               status: UNKNOWN}
+  - {edge: "KRISPER/Poetica -> cell-runtime orchestrator",           status: UNKNOWN}
+  - {edge: "MorphSAT -> production runtime gate",                    status: UNKNOWN}
+  - {edge: "echo-sentry -> cell-runtime",                            status: UNKNOWN}
+  - {edge: "agent substrate -> FGIP evidence traversal",            status: UNKNOWN}
+  - {edge: "receipt generation -> receipt chain -> graph insertion", status: UNKNOWN}
+  - {edge: "HXQ-Solana registration",                                status: UNKNOWN}
+  - {edge: "Almanac strict path",                                    status: UNKNOWN}
+  - {edge: "Layer 1-6 end-to-end execution",                         status: UNKNOWN}

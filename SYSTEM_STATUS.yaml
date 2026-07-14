@@ -1,7 +1,15 @@
 _meta:
+  manifest_status: provisional_public_reconstruction   # -> `reconciled` only after the home-box audit
+  authority:
+    public_checkout: observed
+    work_box_tests: partially_verified      # only echo-sentry executed on the work box
+    advisor_context: reported
+    home_box_reconciliation: pending
   purpose: >
-    Single source of truth for the Echo Labs substrate. Every count in the profile or any
-    README must be generated from or checked against this file. See docs/STATUS_SCHEMA.md.
+    PROVISIONAL source of truth for the Echo Labs substrate (see manifest_status). Every
+    count in the profile or any README must be generated from or checked against this file
+    once reconciled. See docs/STATUS_SCHEMA.md. "Provisional" means not every entry is
+    verified yet — most are `reported`/`not_run` pending the home-box pass.
   sources:
     - {id: public_checkout, type: observed}       # observed on the work-box: SHAs, default branches, the 3 READMEs
     - {id: advisor_home_context, type: reported}  # reported by advisor with home-box memory; NOT observed here

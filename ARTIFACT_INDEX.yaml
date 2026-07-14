@@ -1,0 +1,36 @@
+_meta:
+  purpose: >
+    Where every important model / dataset / checkpoint / receipt-bundle / proof-pack lives
+    (or will live) publicly, so a clean machine can retrieve and hash-verify it without the
+    home box.
+  manifest_status: pending_home_box_inventory
+  RULE: >
+    Populated by the home-box audit ONLY. Do NOT upload anything during inventory; record
+    intended destinations and dispositions first.
+  recommended_stores:
+    models_and_datasets: huggingface
+    proof_packs_and_benchmarks: github_releases
+    small_fixtures_and_schemas: repository
+    irreplaceable_critical: second_public_mirror
+
+# entry schema (one per artifact):
+# - artifact_id:
+#   type: model | dataset | checkpoint | receipt_bundle | proof_pack | gguf | safetensors | lora | db
+#   status: pending_inventory
+#   local_path:
+#   size_bytes:
+#   sha256:
+#   producer_repo:
+#   producer_commit:            # full SHA
+#   creation_command:
+#   receipt_path:
+#   public_destination:         # hf / github_release / repo / mirror
+#   license:
+#   contains_sensitive_data: true | false
+#   regenerable: true | false
+#   rebuild_command:            # if regenerable
+#   publication_disposition:    # from PUBLICATION_LEDGER disposition_enum
+#   exclusion_reason:           # if excluded
+#   verification: pending
+
+artifacts: []   # <- populated by the home-box audit

@@ -1,0 +1,38 @@
+_meta:
+  purpose: >
+    Disposition for every meaningful LOCAL item (repo, commit, branch, dirty file, receipt,
+    model, dataset, doc, service, script, db). The default is publish or sanitize-then-
+    publish; exclusion requires a specific reason.
+  manifest_status: pending_home_box_inventory
+  RULE: >
+    Populated by the home-box audit ONLY. Do NOT fill from public assumptions. Every item
+    gets exactly one disposition; nothing meaningful may remain LOCAL_ONLY without a
+    documented legal / privacy / security / license reason.
+  disposition_enum:
+    - PUBLISH_NOW
+    - PUBLISH_WIP_BRANCH
+    - SANITIZE_THEN_PUBLISH
+    - PUBLISH_AS_HISTORICAL
+    - PUBLISH_ARTIFACT_EXTERNALLY
+    - REGENERATE_FROM_PUBLIC_INPUTS
+    - SUPERSEDED_BUT_PRESERVE
+    - EXCLUDE_SECRET
+    - EXCLUDE_PERSONAL_DATA
+    - EXCLUDE_EMPLOYER_DATA
+    - EXCLUDE_THIRD_PARTY_LICENSE
+    - DUPLICATE_REMOVE_AFTER_VERIFICATION
+    - UNKNOWN_REQUIRES_REVIEW
+
+# entry schema (one per meaningful item):
+# - item_id:
+#   local_path:
+#   kind: repo | commit | branch | dirty_file | receipt | model | dataset | doc | service | script | db
+#   authoritative: true | false        # the canonical version where duplicates exist
+#   disposition: <one of disposition_enum>
+#   target: <repo/branch/release/hf/mirror, or null>
+#   exclusion_reason: <required iff disposition starts with EXCLUDE_>
+#   sanitization_needed: []            # fields/paths to strip before publishing
+#   source: home_box_verified
+#   notes: []
+
+items: []   # <- populated by the home-box audit
