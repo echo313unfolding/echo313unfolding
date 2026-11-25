@@ -1,150 +1,28 @@
-# echo313unfolding
+# Echo Labs
 
-**Research question:** What structure survives lossy compression of neural network weights, and what can you do with it without decompressing?
+I build inference software for GPUs with limited memory. On my 4 GB Quadro T2000, Qwen2.5-Coder-3B-Instruct generated **37.0 tokens/s** with HXQ affine-6 (AF6) during a 128-token generation test in October 2026. The same build processed a 512-token prompt at **241.6 tokens/s**. [Qwen T2000 benchmark](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/receipts/hxq_af6_probe_qwen3b/MODEL_ZOO_REGRESSION_MATRIX_v3.md#L372-L374)
 
-**Core finding (experimentally supported, 217 tests across 15 suites):**
-Transition structure appears to preserve execution-relevant behavior after value-level identity is compressed away. Three invariants — transition diversity, memory length, spatial coherence — form a minimum behavioral fingerprint that predicts role, architecture family, and execution properties (R² = 0.818 on output norm) from the compressed representation alone.
+## Generating tokens from packed weights
 
-This is not a claim about lossless reconstruction. It is a claim about what the compressed artifact *already encodes* — enough to route, classify, and pre-screen without materializing the original weights.
+AF6 stores a scale, an offset and 128 six-bit weights per group. During single-token generation, my llama.cpp fork reads four weight values from three packed bytes, unpacks them in GPU registers and accumulates their dot product with quantized activations. The kernel can use the weight matrix without writing a dense copy to GPU memory. [Qwen model file](https://huggingface.co/EchoLabs33/qwen2.5-coder-3b-hxq/blob/main/qwen2.5-coder-3b-instruct-hxq-affine6.gguf) · [CUDA dispatch](https://github.com/echo313unfolding/llama.cpp/blob/580e9a213056f4168d4b54945055f98e72d53c44/ggml/src/ggml-cuda/mmvq.cu) · [Dot-product kernel](https://github.com/echo313unfolding/llama.cpp/blob/580e9a213056f4168d4b54945055f98e72d53c44/ggml/src/ggml-cuda/vecdotq.cuh#L757-L797)
 
----
+These two runs measured 128-token generation. Q4_K_M was fastest in both.
 
-## Research Threads
+| GPU | Model | AF6 (tok/s) | Q6_K (tok/s) | Q4_K_M (tok/s) | Source |
+| --- | --- | ---: | ---: | ---: | --- |
+| Quadro T2000 | Zamba2-2.7B-Instruct | 16.27 | 15.73 | 18.73 | [October benchmark](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/receipts/hxq_af6_probe_qwen3b/MODEL_ZOO_REGRESSION_MATRIX_v3.md#L384-L395) |
+| RTX 3090 | Qwen2.5-Coder-3B-Instruct | 226.53 | 204.86 | 245.03 | [Model card](https://huggingface.co/EchoLabs33/qwen2.5-coder-3b-hxq#gguf-runtime-benchmark-rtx-3090) |
 
-### 1. HXQ — Calibration-Free Compression and Compressed-Domain Compute
+## What survives compression
 
-Scalar k-means VQ with per-group affine correction. No calibration data. Works on transformers, SSMs, hybrids, MoEs, vision models (15 architectures tested). The interesting part is not the compression ratio — it's that the compressed form is directly executable via gather-matmul (no decompression step).
+**Retrieval.** HelixLinear reduced the 37 linear layers in all-MiniLM-L6-v2 from 43.1 MB to 10.9 MB. Across eight queries over 46 project documents, the compressed encoder returned the same first result as the dense encoder seven times. Building the index took 0.339 seconds with the dense encoder and 1.531 seconds with the compressed one. [Per-query results](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/receipts/compressed_rag_demo/rag_demo_20260312T122004.json)
 
-| Repo | What | Evidence |
-|------|------|----------|
-| [helix-substrate](https://github.com/echo313unfolding/helix-substrate) | Python quantizer + HuggingFace integration | v0.3.3, 15 models on [HF](https://huggingface.co/EchoLabs33), cos >= 0.999 |
-| [helix-codec](https://github.com/echo313unfolding/helix-codec) | Standalone C99 codec library | Non-LLM proof: 1024 embeddings cos_min 0.9996, MIT |
-| [hxq-native](https://github.com/echo313unfolding/hxq-native) | C/CUDA decompression kernels | GPU decode 27.83 tok/s = Q8_0 parity at 26% less size |
-| [hxq-whitepaper](https://github.com/echo313unfolding/hxq-whitepaper) | Technical paper | v3, methodology + results |
-| [llama.cpp fork](https://github.com/echo313unfolding/llama.cpp) | GGML_TYPE_HXQ integration | `hxq-affine-type` branch, 10 files, native mmvq kernel |
-| [helix-online-kv](https://github.com/echo313unfolding/helix-online-kv) | KV cache compression (PolarQuant) | Gate PASS: 55-59% MSE improvement, research prototype |
+**Embedding storage.** I tested AF6 on 1,024 MS MARCO passage embeddings with 768 values each. At 6.25 bits per value, the lowest cosine similarity between an original embedding and its reconstruction was 0.999558. [Per-embedding results](https://github.com/echo313unfolding/helix-codec/blob/874ab56a6a71fe95a74bbb225d7b67d4658acf22/receipts/hxq_non_llm_embedding_proof.json)
 
-**Key results:**
-- 3090 decode: 226.53 tok/s (92.4% of Q4_K_M, beats Q6_K by 10.6%)
-- Architecture breadth: Qwen, Llama, Mamba, Zamba2, OLMoE, CLIP, SBERT, ResNet
-- Non-ML tensor distributions pass (Cauchy kurtosis 5765: cos 0.9985)
-- Fractal IFS codebook: 6.7x codebook compression with recursive Barnsley maps (real weights, PASS)
+**Attention memory.** On three prompts, the first compressed key/value cache pipeline averaged 0.649446 cosine similarity to the reference attention outputs across 264 entries, below its 0.98 target. The follow-up kept layer 0 exact. Across 252 entries from layers 1–21 on the same prompts, the mean was 0.99972873. [Original run](https://github.com/echo313unfolding/helix-online-kv/blob/b8889118f0d8dfaa09365f86ec0396f5b9daaaaa/receipts/cdc01_compressed_attention_long_20260325T230153.json) · [Follow-up](https://github.com/echo313unfolding/helix-online-kv/blob/b8889118f0d8dfaa09365f86ec0396f5b9daaaaa/receipts/cdc03_hybrid_layers1_21_20260326T100511.json)
 
-**What is not claimed:** HXQ does not beat Q4_K_M on speed. Its contribution is calibration-free operation, architecture breadth, and the compressed-domain compute path.
+## Security triage with MorphSAT
 
----
+MorphSAT tests when an agent has enough evidence to issue a verdict. On 20 fixed security-triage scenarios, Qwen2.5-Coder-7B returned the expected verdict in 14 cases with neutral prompts. When the monitor supplied its recommendation and the model made the final call, all 20 verdicts matched. [Monitor code](https://github.com/echo313unfolding/MorphSAT/blob/14689b7a36f263c81a1a9f41522d55546fd76992/morphsat/shadow_monitor.py) · [Per-scenario verdicts](https://github.com/echo313unfolding/MorphSAT/blob/14689b7a36f263c81a1a9f41522d55546fd76992/receipts/morphsat_v83_early_verdict_guard/morphsat_v83_gate_authority_20260508T125045Z.json)
 
-### 2. Crystal Vault / Ghost Coordinates — Behavioral Fingerprinting from Compressed Artifacts
-
-The experimental program asking: what can you learn about a tensor's *role and behavior* from its compressed representation, without decompressing it?
-
-**Status:** Active research, 217 tests across 15 suites (Phases 0–0.19). Code not yet public — results documented in test receipts.
-
-**Proven (by test):**
-- Ghost classifier: k-NN on 292 real tensors. Role accuracy 73.3% (8.1x random baseline), architecture family 92.8%. ([Phase 0.15](https://github.com/echo313unfolding/helix-substrate))
-- Execution prediction: Ghost features beat shape-only on all 6 execution targets. Best: output_norm R² = 0.818 vs shape R² = 0.238. ([Phase 0.16])
-- Pre-route decision: Architecture-aware multi-feature routing clears 53.8% of tensors with precision 0.955, recall 0.904. ([Phase 0.17b])
-- Minimum invariant basis: TE + MO + AC confirmed — dropping any one degrades. Every feature contributes. ([Phase 0.18])
-
-**Active hypothesis:**
-- Cross-architecture generalization is family-specific, not universal. Within-family transfers (Mamba → Mamba2: 88.5%). Cross-family fails. ([Phase 0.19])
-
-**Speculative:**
-- Whether ghost coordinates constitute a substrate-independent behavioral description (Level 4 claim — too strong, not proven)
-
----
-
-### 3. MorphSAT — Structured Cognitive Control for LLM Agents
-
-**When should an LLM agent stop gathering evidence and commit to a decision?**
-
-MorphSAT answers this by embedding the model inside an external control structure that holds decision authority. The model proposes actions; a shadow monitor with posture states (ORIENT, SAFE_DISTANCE, INVESTIGATING, COMMIT_READY, ESCALATE_READY) decides when to commit. Nine versions tested, each falsifying or confirming a specific mechanism.
-
-| Repo | What | Evidence |
-|------|------|----------|
-| [MorphSAT](https://github.com/echo313unfolding/MorphSAT) | Full implementation + benchmark | 100% accuracy (v8.3), 123 tests, MIT |
-
-**Key results:**
-- v8.3: 100% on 20-scenario benchmark (gate_assists + early-verdict guard)
-- Dual-agent recomputation gate: 100% precision on disagreement detection
-- Nine-version proof chain: each version tests one mechanism, records what failed and why
-- Novelty-as-penalty DEAD (v6). Novelty-as-posture WORKS (v7): benign accuracy 35.7% → 78.6%
-
-**For cognitive architecture reviewers:**
-- [`docs/COGNITIVE_ARCHITECTURE_TRANSLATION.md`](https://github.com/echo313unfolding/MorphSAT/blob/main/docs/COGNITIVE_ARCHITECTURE_TRANSLATION.md) — term mapping to Soar, ACT-R, and active inference
-- [`docs/morphsat_technical_note.md`](https://github.com/echo313unfolding/MorphSAT/blob/main/docs/morphsat_technical_note.md) — 2-page technical note with full results
-- Shadow monitor maps to Soar's operator selection + metacognitive control
-- Split memory (threat/tolerance stores) maps to episodic memory with bidirectional familiarity
-- Swarm escalation maps to impasse/substate handling
-- The core claim: structured external control compensates for a model operating outside its primary domain (7B coding model achieving 100% on security triage)
-
----
-
-### 4. Cell Runtime — Multi-Model Orchestration
-
-Single-GPU multi-model routing with specialist cartridges, hardware-aware swapping, and rolling session memory.
-
-| Repo | What | Evidence |
-|------|------|----------|
-| [cell-runtime](https://github.com/echo313unfolding/cell-runtime) | Orchestrator + gateway + memory lane | Spec + implementation, 153 tests |
-| [echo-sentry](https://github.com/echo313unfolding/echo-sentry) | External recurrent memory + safety gate | v0.1.0, 60 tests, MIT |
-
----
-
-### 5. FGIP — Evidence Graph Intelligence
-
-Maps federal obligations, tariffs, mineral supply chains, donor networks, and reshoring flows from government source documents. Every edge has a source citation. AI-generated claims enter as UNVERIFIED (tier-3) and require fetched-URL verification receipts for promotion.
-
-| Repo | What | Evidence |
-|------|------|----------|
-| [FGIP](https://github.com/echo313unfolding/FGIP) | Graph database + 24 agents | 2,100+ nodes, 2,800+ edges, 69K+ proposed |
-| [fgip-globe](https://github.com/echo313unfolding/fgip-globe) | CesiumJS 3D visualization | Geospatial rendering of funding chains |
-
-**Proven findings:** Energy intensity explains tariff gradient (r = 0.709, p < 0.01). Sanctions evasion as formula DISPROVEN (r = 0.016). 5GW citation chain mapped into SCOTUS amicus record.
-
----
-
-### 6. HXQ-Solana — Receipt-Gated Asset Provenance
-
-Protocol-level quality enforcement for off-chain artifacts. Token-2022 Transfer Hook blocks transfers if compressed asset fails fidelity gate. Not "AI on blockchain" — provenance infrastructure where quality is self-enforcing at the protocol layer.
-
-| Repo | What | Evidence |
-|------|------|----------|
-| [hxq-solana](https://github.com/echo313unfolding/hxq-solana) | Solana program + Transfer Hook | Devnet proven: active ALLOWED, quarantined BLOCKED |
-
----
-
-## For Cognitive Architecture Reviewers
-
-If you study cognitive architectures, structured agency, or substrate-independent computation:
-
-1. **Start here:** [MorphSAT — Cognitive Architecture Translation](https://github.com/echo313unfolding/MorphSAT/blob/main/docs/COGNITIVE_ARCHITECTURE_TRANSLATION.md)
-   - Direct term mapping: MorphSAT → Soar, ACT-R, active inference
-   - The research question is operator selection under uncertainty with bounded resources
-
-2. **Then:** [MorphSAT — Technical Note](https://github.com/echo313unfolding/MorphSAT/blob/main/docs/morphsat_technical_note.md)
-   - 2-page summary with experimental results
-   - Nine-version ablation chain showing which control mechanisms work and which fail
-
-3. **The compression connection:** Crystal Vault / Ghost coordinates ask whether behavioral properties of neural computation survive compression — whether you can characterize what a tensor *does* from its compressed form alone. If yes, this is a substrate-independent behavioral description derived from statistical structure rather than value-level identity.
-
-4. **The connecting claim (hypothesis, not proven):** The same structural invariants that allow pre-routing in a compressed runtime may correspond to the kind of functional characterization that cognitive architectures use to describe processing modules — role, capacity, interaction pattern — independent of implementation substrate.
-
----
-
-## Methodology
-
-- **Receipts or it didn't happen** — every claim backed by JSON receipts with compute cost blocks
-- **Proof layers:** (1) code runs, (2) correct output format, (3) real data, (4) statistical significance
-- **Falsification-first** — each version of MorphSAT records what failed and why; dead paths are documented alongside working ones
-- **Tier-gated evidence** — AI-generated claims cannot self-promote; verification requires fetched URLs and content hashes
-
-## What this is not
-
-- Not a startup. No product landing page.
-- Not all proven. Active hypotheses and speculative connections are marked as such.
-- Not claiming novelty without receipts. The test counts are real. The dead ends are documented.
-
----
-
-Echo Labs LLC | [HuggingFace models](https://huggingface.co/EchoLabs33) | MIT where marked
+Echo Labs LLC · [Published models](https://huggingface.co/EchoLabs33)
