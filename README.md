@@ -1,10 +1,18 @@
 # Echo Labs
 
-I build inference software for GPUs with limited memory. On my 4 GB Quadro T2000, Qwen2.5-Coder-3B-Instruct generated **37.0 tokens/s** with HXQ affine-6 (AF6) during a 128-token generation test in October 2026. The same build processed a 512-token prompt at **241.6 tokens/s**. [Qwen T2000 benchmark](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/receipts/hxq_af6_probe_qwen3b/MODEL_ZOO_REGRESSION_MATRIX_v3.md#L372-L374)
+I build inference software for GPUs with limited memory. HXQ supports heterogeneous compression within one model. Its encoder can represent some weights individually, encode others in pairs and keep selected tensors unquantized.
+
+## Mixed codecs in one model
+
+In Zamba2-1.2B, the encoder assigned two-dimensional vector quantization (VQ) to eligible Mamba weights and scalar VQ to transformer weights. In the March 2026 GPU evaluation, HelixLinear ran **60 scalar VQ modules and 76 two-dimensional VQ modules** in one model. Perplexity was 3.45% higher than the dense baseline. [Mixed-codec encoder](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/tools/compress.py#L758-L774) · [Zamba2 evaluation record](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/receipts/hxq_af6_probe_qwen3b/MODEL_ZOO_REGRESSION_MATRIX_v3.md#L78-L89)
+
+Hydra uses measurements on each tensor to choose an affine bit width or keep it unquantized. Its published GGUF bridge exports HXQ affine-6 (AF6) and unquantized weights. On Qwen2.5-Coder-3B-Instruct, all 252 matrices tested met the quality-first policy’s 0.999 cosine threshold at six bits. The Qwen generation rates below measure the AF6 file. [Hydra planner](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/helix_substrate/hydra_router.py#L458-L515) · [GGUF bridge](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/tools/hydra_plan_to_tensor_type_file.py#L4-L11) · [Qwen tensor probe](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/receipts/hxq_af6_probe_qwen3b/af6_probe_qwen3b_20261027T101245.json) · [Compiled codec check](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/receipts/hxq_af6_probe_qwen3b/compiled_codec_parity_receipt.json)
 
 ## Generating tokens from packed weights
 
 AF6 stores a scale, an offset and 128 six-bit weights per group. During single-token generation, my llama.cpp fork reads four weight values from three packed bytes, unpacks them in GPU registers and accumulates their dot product with quantized activations. The kernel can use the weight matrix without writing a dense copy to GPU memory. [Qwen model file](https://huggingface.co/EchoLabs33/qwen2.5-coder-3b-hxq/blob/main/qwen2.5-coder-3b-instruct-hxq-affine6.gguf) · [CUDA dispatch](https://github.com/echo313unfolding/llama.cpp/blob/580e9a213056f4168d4b54945055f98e72d53c44/ggml/src/ggml-cuda/mmvq.cu) · [Dot-product kernel](https://github.com/echo313unfolding/llama.cpp/blob/580e9a213056f4168d4b54945055f98e72d53c44/ggml/src/ggml-cuda/vecdotq.cuh#L757-L797)
+
+On my 4 GB Quadro T2000, Qwen2.5-Coder-3B-Instruct generated **37.0 tokens/s** with AF6 during a 128-token generation test in October 2026. The same build processed a 512-token prompt at **241.6 tokens/s**. [Qwen T2000 benchmark](https://github.com/echo313unfolding/helix-substrate/blob/2a951fd3044a6d142e62f8e3015cd8a49a301c4c/receipts/hxq_af6_probe_qwen3b/MODEL_ZOO_REGRESSION_MATRIX_v3.md#L372-L374)
 
 These two runs measured 128-token generation. Q4_K_M was fastest in both.
 
